@@ -13,27 +13,34 @@
 	<script type="text/javascript">
 
 		//TODO
-		// spaceship turns.
-		// add astaroids : hit laser : hit ship : spawn new astr:
-		// add lasers : hit ast: 
-		// add ship thrust : hit ast
-
+	
+	
 		var spaceShip ;
 		var asteroid = []; 
-		var maxAsteroids = 6;
+		var maxAsteroids = 8;
+		var dustSystem ;
+		var hud ;
+		var wave = 0;
+		var img ;
 
 		function setup() {
-			canvas = createCanvas(window.innerWidth-50,window.innerHeight-50);	
+			canvas = createCanvas(window.innerWidth-50,window.innerHeight-50);
+			hud = new Hud (width, height);	
+			dustSystem = new DustControl(100);
  			spaceShip = new Ship( width, height);
  			for ( let i = 0 ; i < maxAsteroids ; i ++ ){
  				asteroid.push(  new Asteroid(floor(random(width)), floor(random(height))));
  			}
+ 			wave++;
+ 			//img = loadImage('./space.jpg'); 
+ 			//console.log(img);
  		}
 
  		function keyReleased () {
  			//console.log(`keyReleased:${keyCode}`);
  			switch ( keyCode ) {
  				case 32 : /* SPACE FIRE */
+ 					spaceShip.fire();
  					break;
  				case 38 : /* THRUST */ 
  					//console.log(`keyReleased:${keyCode} - shut off thrust`);
@@ -64,16 +71,49 @@
  			}
  		}
 		function draw() {
-			background(0);
-			
-			for ( let i = 0 ; i < maxAsteroids ; i ++ ){
+			background(0,0,0,150);
+			//image(img, 100,100);
+			dustSystem.draw();
+			for ( let i = asteroid.length-1 ; i >=0 ; i-- ){
  				asteroid[i].update();
  				asteroid[i].draw();
  				spaceShip.hit(asteroid[i]);
 
+ 				if ( asteroid[i].explode ) {
+ 					//console.log(`asteroid:explode`);
+ 					//asteroid.concat( );
+ 					let newA = asteroid[i].breakup();
+ 					for ( let j = 0 ; j < newA.length ; j++) {
+ 						asteroid.push(newA[j]);
+ 					}
+ 					
+ 					asteroid.splice(i,1);
+
+ 				}
+ 				//console.log(asteroid[i]);
+ 				hud.update( spaceShip.fireCount, asteroid.length, wave);
+				hud.draw();
  			}
 			spaceShip.draw();
 			spaceShip.update();
+
+			if (spaceShip.isDead() ) {
+				push();
+				fill( 255 );
+				textSize(24);
+				text("Game Over",(width-100)/2, height/2)
+				pop();
+				noLoop();
+			}
+
+			if ( asteroid.length == 0 ) {
+				maxAsteroids+=2;
+				for ( let i = 0 ; i < maxAsteroids ; i ++ ){
+					asteroid.push(  new Asteroid(floor(random(width)), floor(random(height))));
+				}
+				wave++;
+
+			}
 
 		}
 
