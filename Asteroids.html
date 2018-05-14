@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+	<title>Asteroids</title>
+
+	
+	
+
+	
+	
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.6.0/p5.js"></script>
+	<script src="ship.js"></script>
+	
+	<script type="text/javascript">
+
+		//TODO
+		// spaceship turns.
+		// add astaroids : hit laser : hit ship : spawn new astr:
+		// add lasers : hit ast: 
+		// add ship thrust : hit ast
+
+		var spaceShip ;
+		var asteroid = []; 
+		var maxAsteroids = 6;
+
+		function setup() {
+			canvas = createCanvas(window.innerWidth-50,window.innerHeight-50);	
+ 			spaceShip = new Ship( width, height);
+ 			for ( let i = 0 ; i < maxAsteroids ; i ++ ){
+ 				asteroid.push(  new Asteroid(floor(random(width)), floor(random(height))));
+ 			}
+ 		}
+
+ 		function keyReleased () {
+ 			//console.log(`keyReleased:${keyCode}`);
+ 			switch ( keyCode ) {
+ 				case 32 : /* SPACE FIRE */
+ 					break;
+ 				case 38 : /* THRUST */ 
+ 					//console.log(`keyReleased:${keyCode} - shut off thrust`);
+ 					spaceShip.shutOffThrusters();
+ 					break;
+ 				case 39 : /* RIGHT */ 
+ 				case 37 : /* LEFT */
+ 					spaceShip.stopRotate();
+ 					break;
+ 			}
+ 		}
+ 		function keyPressed ( ) {
+ 			//console.log(`keyPressed:${keyCode}`);
+
+ 			switch ( keyCode ) {
+ 				case 32 : /* SPACE FIRE */
+ 					break;
+ 				case 38 : /* THRUST */ 
+ 					//console.log(`keyReleased:${keyCode} - engage thrust`);
+ 					spaceShip.engageThrusters();
+ 					break;
+ 				case 39 : /* RIGHT */ 
+ 					spaceShip.rotateRight();
+ 					break;
+ 				case 37 : /* LEFT */
+ 					spaceShip.rotateLeft();
+ 					break;
+ 			}
+ 		}
+		function draw() {
+			background(0);
+			
+			for ( let i = 0 ; i < maxAsteroids ; i ++ ){
+ 				asteroid[i].update();
+ 				asteroid[i].draw();
+ 				spaceShip.hit(asteroid[i]);
+
+ 			}
+			spaceShip.draw();
+			spaceShip.update();
+
+		}
+
+
+
+
+
+
+	
+	</script>
+<body>
+
+</body>
+</html>
+
+
