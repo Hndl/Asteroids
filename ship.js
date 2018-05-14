@@ -38,13 +38,13 @@ class Hud {
 class DustControl {
 	constructor( _n) {
 		this.sys = [];
-		for ( let i = 0 ; i < _n ; i++){
+		for ( var i = 0 ; i < _n ; i++){
 			this.sys.push( new Dust() ) ;
 		}
 	}
 
 	draw() {
-		for ( let i = 0 ; i < this.sys.length ; i++){
+		for ( var i = 0 ; i < this.sys.length ; i++){
 			this.sys[i].update();
 			this.sys[i].draw();
 		}	
@@ -54,7 +54,12 @@ class Dust {
 	constructor( ) {
 		this.pos = createVector(floor(random(width)), floor( random(height)));
 		this.vel = p5.Vector.random2D();
-		this.vel.mult(random(-1,1	));
+		this.vel.mult(random(-1.5,1.5	));
+		this.colorArray = ['#8B54BD','#94ABB1','#3F5F2E','#FBA92A','#FDEF43'];
+		this.col = this.col = this.getColor();
+	}
+	getColor() {
+		return ( this.colorArray[ floor( random( 0,this.colorArray.length))]) ;
 	}
 	edges() { 
 		if (this.pos.x < 0){
@@ -77,8 +82,8 @@ class Dust {
 
 	draw() { 
 		push();
-		stroke(255,255,255,floor(random(255)));
-		strokeWeight(random(1,4));
+		stroke(this.col);
+		strokeWeight(random(1,5));
 		point(this.pos.x, this.pos.y);
 		pop();
 	}
@@ -134,14 +139,20 @@ class Asteroid {
 		this.explode = false;
 		this.danger = false;
 		this.dangerToship = false;
+		this.colorArray = ['#8B54BD','#94ABB1','#3F5F2E','#FBA92A','#FDEF43'];
+		this.col = this.col = this.getColor();
 
-		for ( let i = 0 ; i < this.total ; i++ ) {
+		for ( var i = 0 ; i < this.total ; i++ ) {
 			//this.r = floor(random(30,60));
 			this.offset[i] = random(-this.r * 0.2, this.r * 0.5);
 		}
 	}
+	getColor() {
+		return ( this.colorArray[ floor( random( 0,this.colorArray.length))]) ;
+	}
+
 	breakup () {
-		let spawnAsteroid = [];
+		var spawnAsteroid = [];
 		if ( this.r/2 > 5) {
 			spawnAsteroid.push( new Asteroid( this.pos.x, this.pos.y, this.r/2));
 			spawnAsteroid.push( new Asteroid( this.pos.x, this.pos.y, this.r/2));
@@ -149,8 +160,8 @@ class Asteroid {
 		return ( spawnAsteroid);
 	}
 	hit ( _laser ) {
-		let d = dist( _laser.pos.x, _laser.pos.y, this.pos.x, this.pos.y);
-		let b = (d < (this.r) );
+		var d = dist( _laser.pos.x, _laser.pos.y, this.pos.x, this.pos.y);
+		var b = (d < (this.r) );
 		if ( b ){
 			//console.log(`asteroid hit - distance:${d} hit${b}`);	
 			this.explode = true;
@@ -183,20 +194,20 @@ class Asteroid {
 
 			if ( this.dangerToship ){
 				fill(255,0,0,20);
-				stroke(255,0,0);
-				strokeWeight(1);
+				stroke(this.col);
+				strokeWeight(3);
 			} else { 
 				fill(0);
-				stroke(255);
+				stroke(this.col);
 				strokeWeight(1);
 			}
 		}
 		rotate(this.heading);
 		//ellipse(0,0, this.r*2, this.r*2);
 		beginShape();
-		 for (let i = 0; i < this.total; i++) {
-      		let angle = map(i, 0, this.total, 0, TWO_PI);
-      		let rr = this.r + this.offset[i];
+		 for (var i = 0; i < this.total; i++) {
+      		var angle = map(i, 0, this.total, 0, TWO_PI);
+      		var rr = this.r + this.offset[i];
       		vertex(rr * cos(angle), rr * sin(angle));
     	}
 		endShape(CLOSE);
@@ -243,6 +254,7 @@ class Ship {
 		this.fireCount = 0;	
 		this.laser = [];
 		this.shield = 100;
+		this.danger = false;
 		
 	}
 
@@ -266,7 +278,7 @@ class Ship {
 
 
 	
-		for ( let i = this.laser.length-1 ; i >= 0 ; i--) {
+		for ( var i = this.laser.length-1 ; i >= 0 ; i--) {
 				
 			if (!this.laser[i].offScreen()){
 				this.laser[i].update();
@@ -289,10 +301,10 @@ class Ship {
 		if ( this.explode ) {
 			if ( this.explodeI <= this.explodeSequence ) {
 				noFill();
-				let alpha = map(this.explodeI, 255,0 , 0, this.explodeSequence);
+				var alpha = map(this.explodeI, 255,0 , 0, this.explodeSequence);
 				stroke(alpha,alpha*-1,255,alpha);
 				strokeWeight(2);
-				for ( let i = 0 ; i < 10 ; i++ ){
+				for ( var i = 0 ; i < 10 ; i++ ){
 					ellipse(0, 0, (this.explodeI-(i*10))*2, (this.explodeI-(i*10))*2);	
 				}
 				this.explodeI++;
@@ -317,15 +329,21 @@ class Ship {
 			
 			stroke(255);
 			strokeWeight(2);
-			let d = this.r*2;
+			var d = this.r*2;
 			noFill();
 			triangle(-2 / 3 * this.r, -this.r,
 	               -2 / 3 * this.r, this.r,
 	                4 / 3 * this.r, 0);
 
-			strokeWeight(0.5);
-			fill(255,255,255,10);
-			ellipse(0,0,this.shield*2, this.shield*2);
+			if ( this.danger ) {
+				strokeWeight(2);
+				fill(100,100,100);
+				ellipse(0,0,this.shield*2, this.shield*2);
+			} else { 
+				strokeWeight(0.5);
+				fill(100,255,255,10);
+				ellipse(0,0,this.shield*2, this.shield*2);
+			}
 		}
 		pop();
 	}
@@ -373,7 +391,7 @@ class Ship {
 
 	thrustCalc ( _d ) {
 
-		let force = p5.Vector.fromAngle(this.currentRotaton);
+		var force = p5.Vector.fromAngle(this.currentRotaton);
 		force.mult(_d);
 
 		this.vel.add(force);
@@ -390,17 +408,18 @@ class Ship {
 	}
 
 	hit( _asteroid ) {
-		let d = dist( _asteroid.pos.x, _asteroid.pos.y, this.pos.x, this.pos.y);
-		let b = (d < (_asteroid.r + this.r) );
+		var d = dist( _asteroid.pos.x, _asteroid.pos.y, this.pos.x, this.pos.y);
+		var b = (d < (_asteroid.r + this.r) );
 
 		_asteroid.dangerToship = d < (_asteroid.r + this.r + 100);
 		
+
 		if ( b ){
 			//console.log(`distance:${d} hit${b}`);	
 			this.explode = true;
 		}
 
-		for ( let i = this.laser.length-1 ; i >= 0 ; i--) {
+		for ( var i = this.laser.length-1 ; i >= 0 ; i--) {
 			
 			if ( _asteroid.hit( this.laser[i] ) ) {	
 				this.laser.splice(i,1);//remove the item from the array
