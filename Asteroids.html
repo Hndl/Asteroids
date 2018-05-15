@@ -2,42 +2,503 @@
 <html>
 	<title>Asteroids</title>
 
+
 	
 	
 
 	
 	
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.6.0/p5.js"></script>
-	<script src="ship.js"></script>
 	
 	<script type="text/javascript">
 
-		//TODO
+
+		const MIN_NEWASTEROIDS	=	2;
+		const MAX_NEWASTEROIDS	=	5;
+		const MAX_DUSTSPEED		=	2;
+		const MAX_LASERSPEED	=	10;
+
+		const MAX_ASTEROIDS_ROTATION_SPEED	=	0.03;
+
+		const MIN_ASTEROID_SPAWNSIZE	=	5;
+		const MIN_ASTEROID_SPAWN= 2;
+		const MAX_ASTEROID_SPAWN=5;  //note - to make this difficult, change this to 10;
+		const MIN_ASTEROID_SIZE = 30
+		const MAX_ASTEROID_SIZE = 60
+		const MAX_ASTEROIDS 	= 1;
+		const MAX_SPACE_DUST 	= 150;
+
+		const SCREEN_LEFT		=	0;
+		const SCREEN_TOP		=	0;
+		const LINE_THIN			=	1;
+		const LINE_THINISH		=	3;
+		const LINE_THICK		=	5;
+
+		const COLOR_DUST		=	['#8B54BD','#94ABB1','#3F5F2E','#FBA92A','#FDEF43'];
+		const COLOR_LASER		=	['#E68295','#8E8588','#D82F4E','#1B6B8C'];
+		const COLOR_HUD			=	['#E68295','#8E8588','#D82F4E','#1B6B8C'];
+		const COLOR_ASTEROID	=	['#8B54BD','#94ABB1','#3F5F2E','#FBA92A','#FDEF43'];
+		const COLOR_SHIP		=   ['#8B54BD','#94ABB1','#3F5F2E','#FBA92A','#FDEF43'];
+
+		class Particle {
+			constructor( _x, _y, _v, _col, _wrap) {
+				this.pos 		= createVector(_x,_y);
+				this.velocity 	= _v.copy();
+				this.colorArray = _col;
+				this.defColor 	= this.getColor();
+				this.wrap 		= _wrap;
+			}
+			wrap(){
+				this.wrap = !this.wrap();
+			}
+			getColor() {
+				return ( this.colorArray[ floor( random( 0,this.colorArray.length))]) ;
+			}
+			update (  ) {
+				this.pos.add(this.velocity);
+				if ( this.wrap) {
+					this.edges();
+				}
+			}
+			offScreen() { 
+				return ( this.pos.x < SCREEN_LEFT || this.pos.x > width || this.pos.y < SCREEN_TOP || this.pos.y > height);
+			}
+			edges() { 
+				if (this.pos.x < SCREEN_LEFT){
+					this.pos.x = width;
+				}
+				if ( this.pos.x > width ) {
+					this.pos.x = SCREEN_LEFT;
+				}
+				if (this.pos.y < SCREEN_TOP){
+					this.pos.y = height;
+				}
+				if ( this.pos.y > height ) {
+					this.pos.y = SCREEN_TOP;
+				}
+			}
+		}
+
+
+
+
+	class Hud {
+		
+		constructor ( _w, _h ) {
+			this.w 				= _w;
+			this.h 				= _h;
+			this.b 				= 20;
+			this.shots 			= 0;
+			this.asteroidCount 	= 0;
+			this.colorArray 	= COLOR_HUD;
+			this.wave 			= 0;
+			this.txtSize 		= 24
+			this.txtOffX 		= this.b+this.txtSize/2;
+			this.txtOffY 		= this.b+this.txtSize;
+		}
+
+		update (_shots, _asteroidCount, _wave, _shipAge ) {
+			this.shots 			= _shots;
+			this.asteroidCount 	= _asteroidCount;
+			this.wave 			= _wave;
+			this.shipAge 		= _shipAge;
+		}
+
+		draw() {
+			push();
+			stroke(this.colorArray[3]);
+			strokeWeight(LINE_THIN);
+			noFill();
+			rect(this.b,this.b,this.w-this.b*2, 50);
+			rect(this.b,this.b,this.w-this.b*2, this.h-this.b*2);
+			stroke(this.colorArray[0]);
+			fill(this.colorArray[3]);
+			textSize(this.txtSize);
+			text(`Wave:${this.wave}.   Asteroids Remaining:${this.asteroidCount}.    Fire:${this.shots}   Score: ${this.shipAge}`, this.txtOffX, this.txtOffY);
+			pop();
+		}
+	}
+
+	class DustControl {
+		constructor( _n ) {
+			this.sys = [];
+			for ( var i = 0 ; i < _n ; i++){
+				this.sys.push( new Dust() ) ;
+			}
+		}
+
+		draw() {	
+			this.sys.forEach(function(element) {
+  				element.update();
+  				element.draw();
+			});
+		}
+	}
+
+	class Dust extends Particle {
+		constructor( ) {
+			let _vel = p5.Vector.random2D();
+			_vel.mult(random(-MAX_DUSTSPEED,MAX_DUSTSPEED));
+			super(floor(random(width)), floor( random(height)) , _vel, COLOR_DUST, true);
+			this.minDust	= 1;
+			this.maxDust 	= 5;
+			
+		}
+		
+		draw() { 
+			push();
+			stroke(this.defColor);
+			strokeWeight(random(this.minDust,this.maxDust));
+			point(this.pos.x, this.pos.y);
+			pop();
+		}
+		
+	}
+
+
+class Laser extends Particle{
+	constructor ( _origin, _originVelocity, _originHeading ){
+		let _vel = p5.Vector.fromAngle(_originHeading);
+  		_vel.mult(MAX_LASERSPEED);
+  		_vel.add(_originVelocity);
+		super(_origin.x, _origin.y , _vel, COLOR_LASER,false);		
+  		this.impact = false;
+  	}
+	offScreen() { 
+		return ( super.offScreen() || this.impact);
+	}
+	draw () {
+		if (!this.impact){
+			push();
+			stroke(this.defColor);
+			strokeWeight(LINE_THICK);
+			point(this.pos.x, this.pos.y);
+			pop();
+		}
+	}
+}
+
+
+class Asteroid extends Particle{
+	constructor( _x, _y , _r) {
+		let _vel = p5.Vector.random2D();
+		super(_x, _y , _vel, COLOR_ASTEROID, true);
+		
+		this.fireCount 		= 0;
+		this.spawnShrink	= 0.5;
+		this.highlightRange	= 20;
+		this.minAstSize		= MIN_ASTEROID_SPAWNSIZE;
+		this.heading 		= 0;
+		this.rotationInc 	= random(-MAX_ASTEROIDS_ROTATION_SPEED,MAX_ASTEROIDS_ROTATION_SPEED);
+		this.r 				= _r || floor(random(MIN_ASTEROID_SIZE,MAX_ASTEROID_SIZE));
+		this.totalPoints 	= floor(random(5, 15)); 
+		this.offset 		= [];
+		this.highlight 		= false;
+		this.asteroidHit	= false;
+		this.generatePoints( this.totalPoints );
+	
+		
+	}
+
+	generatePoints( _pts ){
+		for ( var i = 0 ; i < _pts ; i++ ) {
+			this.offset[i] = random(-this.r * 0.2, this.r * 0.5);
+		}
+	}
+	
+	breakup () {
+		var spawnAsteroid = [];
+		if ( (this.r*this.spawnShrink) > this.minAstSize) {
+			for (let i = 0 ; i < floor(random(MIN_ASTEROID_SPAWN,MAX_ASTEROID_SPAWN)) ; i++ ){
+				spawnAsteroid.push( new Asteroid( this.pos.x, this.pos.y, this.r*this.spawnShrink));
+			}
+		} 
+		return ( spawnAsteroid);
+	}
+	hit ( _laser ) {
+		var d = dist( _laser.pos.x, _laser.pos.y, this.pos.x, this.pos.y);
+		var b = (d < (this.r) );
+		if ( b ){
+			this.asteroidHit 	= true;
+			_laser.impact 		= true;
+			this.highlight 		= true;
+		}
+		// Near Miss Detection
+		if ( d < this.r + this.highlightRange ) {
+			this.highlight = true;
+		} else {
+			this.highlight = false;
+		}
+		
+	}
+	update() {
+		this.heading += this.rotationInc;
+		super.update();
+	}
+
+	draw() {
+		push();
+		translate(this.pos.x, this.pos.y);
+		
+		if (this.highlight){
+			fill(0,255,0);
+			stroke(0,255,0,20);
+			strokeWeight(LINE_THIN);
+		} else {
+
+			if ( this.dangerToship ){
+				fill(255,0,0,20);
+				stroke(this.defColor);
+				strokeWeight(LINE_THINISH);
+			} else { 
+				fill(0);
+				stroke(this.defColor);
+				strokeWeight(LINE_THIN);
+			}
+		}
+		rotate(this.heading);
+		beginShape();
+		 for (var i = 0; i < this.totalPoints; i++) {
+      		var angle = map(i, 0, this.totalPoints, 0, TWO_PI);
+      		var rr = this.r + this.offset[i];
+      		vertex(rr * cos(angle), rr * sin(angle));
+    	}
+		endShape(CLOSE);
+		pop();
+	}
+	
+}
+
+class ShipStatus {
+	constructor(_explodeLifeSpan){
+		this.status = 0;
+		this.lifeCount = 1;
+		this.explodingCount = 0;
+		this.explodingSequence = _explodeLifeSpan;
+		
+	}
+	age(){
+		if ( this.isAlive ) {
+			this.lifeCount ++;
+		}
+		if ( this.isExploding ) {
+			this.explodingCount++;
+		}
+	}
+
+	getTime(){
+		return ( floor( this.lifeCount / 30));
+	}
+	isAlive() {
+		return (this.status === 0 );
+	}
+	isExploding(){
+		return (this.status === 1 );
+	}
+	hasExploded(){
+		return ( this.explodingCount >= this.explodingSequence);
+	}
+	isDead() {
+		return (this.status === 2 );
+	}
+	nextStatus(){
+		this.status++;
+	}
+	alive(){
+		this.status = 0;
+	}
+	dead() {
+		this.status = 2;
+	}
+	exploding(){
+		this.status = 1;
+	}
+
+}
+
+class Ship extends Particle {
+
+	constructor ( _w, _h ) {
+		super(_w/2, _h/2 , createVector(0,0), COLOR_SHIP, true);
+		
+		// Ship Status
+		(this.shipStatus = new ShipStatus(255)).alive();
+		this.thrust 		= false;
+		this.r 				= 12;
+		this.theta 			= 0.08;
+		this.thetaLeft 		= -this.theta;
+		this.thetaRight 	= this.theta;
+		this.turning 		= false;
+		this.currentRotaton = 0 ;	
+	
+		this.fireCount 		= 0;	
+		this.laser 			= [];
+		this.shield 		= 100;
+		this.danger 		= false;
+		
+	}
+
+	isDead() {
+		return ( this.shipStatus.isDead() );
+	}
+
+	update () {
+		if ( this.turning ){
+			this.currentRotaton += this.theta;
+		}
+		if ( this.thrust ) {
+			this.thrustCalc( 0.05 );
+			this.pos.add(this.velocity);
+		} else { 
+			this.thrustCalc( 0 );
+			this.pos.add(this.velocity);
+		}
+
+		for ( var i = this.laser.length-1 ; i >= 0 ; i--) {		//note: reverse! no forEach
+			if (!this.laser[i].offScreen()){
+				this.laser[i].update();
+				this.laser[i].draw();
+			} else {
+				this.laser.splice(i,1);//remove the item from the array
+			}
+		}
+		this.edges();
+		this.shipStatus.age();
+	}
+
+	drawExploding(){
+		//TODO - not always being called!
+		//HACK to explode, still working on this section. good enough!
+		noFill();
+		var alpha = map(this.shipStatus.explodingCount, 255,0 , 0, this.shipStatus.explodingSequence);
+		stroke(alpha,alpha*-1,255,alpha);
+		strokeWeight(2);
+		for ( var i = 0 ; i < 10 ; i++ ){
+			ellipse(0, 0, (this.shipStatus.explodingCount-(i*10))*2, (this.shipStatus.explodingCount-(i*10))*2);	
+		}
+		
+	}
+
+	drawShip(){
+		rotate ( this.currentRotaton );
+		strokeWeight(4)
+		stroke(255,0,0);
+		point(this.r*2 ,0);
+		stroke(0,255,0);
+		point(-this.r*2, this.r*2);
+		stroke(0,0,255);
+		point(-this.r*2, -this.r*2);
+		stroke(this.defColor);
+		strokeWeight(2);
+		var d = this.r*2;
+		noFill();
+		triangle(-2 / 3 * this.r, -this.r,
+	              -2 / 3 * this.r, this.r,
+	               4 / 3 * this.r, 0);
+
+		if ( this.danger ) {
+			strokeWeight(LINE_THINISH);
+			fill(100,100,100);
+			ellipse(0,0,this.shield*2, this.shield*2);
+		} else { 
+			strokeWeight(LINE_THIN/2);
+			fill(100,255,255,10);
+			ellipse(0,0,this.shield*3, this.shield*3);
+		}
+	}
+
+	draw () {
+		push();
+		translate( this.pos.x, this.pos.y);
+		if ( this.shipStatus.isExploding() ) {
+			if ( !this.shipStatus.hasExploded() ) {
+				this.drawExploding();
+			} else {
+				this.shipStatus.dead();
+			}
+		} else {
+			this.drawShip();
+		}
+		pop();
+	}
+
+	rotateLeft ( ) {
+		this.theta = this.thetaLeft;
+		this.turning = true;
+	}
+	rotateRight() {
+		this.theta = this.thetaRight;
+		this.turning = true;
+	}
+
+	
+	stopRotate ( _d  ){
+		//console.log(`stopRotate()`);
+		this.turning = false;
+	}
+
+	shutOffThrusters () {
+		this.thrust = false;
+	}
+
+	engageThrusters () {
+		this.thrust = true;
+	}
+
+	thrustCalc ( _d ) {
+		var force = p5.Vector.fromAngle(this.currentRotaton);
+		force.mult(_d);
+		this.velocity.add(force);
+	}
+
+	fire() {
+		this.fireCount++;
+		this.laser.push(  new Laser(this.pos, this.velocity, this.currentRotaton) );
+	}
+
+	hit( _asteroid ) {
+		var d = dist( _asteroid.pos.x, _asteroid.pos.y, this.pos.x, this.pos.y);
+		var b = (d < (_asteroid.r + this.r) );
+
+		_asteroid.dangerToship = d < (_asteroid.r + (this.r*2) + 100);
+		
+		if ( b ){
+			this.shipStatus.exploding();
+		}
+
+		for ( var i = this.laser.length-1 ; i >= 0 ; i--) { // note:revese
+			if ( _asteroid.hit( this.laser[i] ) ) {	
+				this.laser.splice(i,1);//remove the item from the array
+			}
+		}
+	}
+}
 	
 	
 		var spaceShip ;
 		var asteroid = []; 
-		var maxAsteroids = 8;
+	
 		var dustSystem ;
 		var hud ;
 		var wave = 0;
 		var img ;
+		var maxAsteroids = 0;
 
 		function setup() {
+			maxAsteroids = MIN_ASTEROID_SPAWN;
 			canvas = createCanvas(window.innerWidth-50,window.innerHeight-50);
 			hud = new Hud (width, height);	
-			dustSystem = new DustControl(100);
+			dustSystem = new DustControl(MAX_SPACE_DUST);
  			spaceShip = new Ship( width, height);
- 			for ( let i = 0 ; i < maxAsteroids ; i ++ ){
+ 			for ( var i = 0 ; i < MAX_ASTEROIDS ; i ++ ){
  				asteroid.push(  new Asteroid(floor(random(width)), floor(random(height))));
  			}
  			wave++;
- 			//img = loadImage('./space.jpg'); 
- 			//console.log(img);
+ 		
  		}
 
  		function keyReleased () {
- 			//console.log(`keyReleased:${keyCode}`);
+ 			
  			switch ( keyCode ) {
  				case 32 : /* SPACE FIRE */
  					spaceShip.fire();
@@ -53,7 +514,6 @@
  			}
  		}
  		function keyPressed ( ) {
- 			//console.log(`keyPressed:${keyCode}`);
 
  			switch ( keyCode ) {
  				case 32 : /* SPACE FIRE */
@@ -72,26 +532,23 @@
  		}
 		function draw() {
 			background(0,0,0,150);
-			//image(img, 100,100);
 			dustSystem.draw();
-			for ( let i = asteroid.length-1 ; i >=0 ; i-- ){
+
+			for ( var i = asteroid.length-1 ; i >=0 ; i-- ){
  				asteroid[i].update();
  				asteroid[i].draw();
  				spaceShip.hit(asteroid[i]);
 
- 				if ( asteroid[i].explode ) {
- 					//console.log(`asteroid:explode`);
- 					//asteroid.concat( );
- 					let newA = asteroid[i].breakup();
- 					for ( let j = 0 ; j < newA.length ; j++) {
+ 				if ( asteroid[i].asteroidHit ) {
+ 					var newA = asteroid[i].breakup();
+ 					for ( var j = 0 ; j < newA.length ; j++) {
  						asteroid.push(newA[j]);
  					}
  					
  					asteroid.splice(i,1);
 
  				}
- 				//console.log(asteroid[i]);
- 				hud.update( spaceShip.fireCount, asteroid.length, wave);
+ 				hud.update( spaceShip.fireCount, asteroid.length, wave, spaceShip.shipStatus.getTime());
 				hud.draw();
  			}
 			spaceShip.draw();
@@ -107,8 +564,8 @@
 			}
 
 			if ( asteroid.length == 0 ) {
-				maxAsteroids+=2;
-				for ( let i = 0 ; i < maxAsteroids ; i ++ ){
+				maxAsteroids+=MIN_ASTEROID_SPAWN;
+				for ( var i = 0 ; i < maxAsteroids ; i ++ ){
 					asteroid.push(  new Asteroid(floor(random(width)), floor(random(height))));
 				}
 				wave++;
