@@ -502,6 +502,9 @@ class Ship extends Particle {
  			wave++;
  		
  		}
+ 		function mouseDragged() {
+ 			spaceShip.engageThrusters();
+ 		}
 
  		function mousePressed() {
 
@@ -521,6 +524,7 @@ class Ship extends Particle {
  		
  		function mouseReleased() {
  			spaceShip.stopRotate();
+ 			spaceShip.shutOffThrusters();
  		}
  		function keyReleased () {
  			
