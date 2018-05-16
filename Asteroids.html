@@ -403,7 +403,7 @@ class Ship extends Particle {
 		} else { 
 			strokeWeight(LINE_THIN/2);
 			fill(100,255,255,10);
-			ellipse(0,0,this.shield*3, this.shield*3);
+			ellipse(0,0,this.shield*2, this.shield*2);
 		}
 	}
 
@@ -472,6 +472,11 @@ class Ship extends Particle {
 			}
 		}
 	}
+	inWithinShield( _mX, _mY){
+		var d = dist( _mX, _mY, this.pos.x, this.pos.y);
+		var b = (d < ( this.r + (this.shield)) );
+		return ( b);
+	}
 }
 	
 	
@@ -483,6 +488,7 @@ class Ship extends Particle {
 		var wave = 0;
 		var img ;
 		var maxAsteroids = 0;
+		var bFire = false;
 
 		function setup() {
 			maxAsteroids = MIN_ASTEROID_SPAWN;
@@ -497,6 +503,25 @@ class Ship extends Particle {
  		
  		}
 
+ 		function mousePressed() {
+
+ 			if ( spaceShip.inWithinShield(mouseX, mouseY) ){
+	 			if (mouseX < width/2 ) {
+	 				//turn left
+	 				spaceShip.rotateLeft();
+	 			} else {
+	 				spaceShip.rotateRight();
+
+	 			}
+ 			}else {
+ 				spaceShip.fire();
+ 			}
+ 		}
+
+ 		
+ 		function mouseReleased() {
+ 			spaceShip.stopRotate();
+ 		}
  		function keyReleased () {
  			
  			switch ( keyCode ) {
@@ -584,6 +609,8 @@ class Ship extends Particle {
 <body>
 
 </body>
+	
+	
 </html>
 
 
