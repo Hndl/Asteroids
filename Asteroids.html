@@ -629,7 +629,7 @@ class Ship extends Particle {
 			
 
   		function orientation(event){
- 	 		txtMag=`Magnetometer:a:${event.alpha} b:${event.beta}. g:${event.gamma}`;
+ 	 		txtMag=`Magnetometer:a:${floor(event.alpha)} b:${floor(event.beta)}. g:${floor(event.gamma)}`;
 		}
 
 
