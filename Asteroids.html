@@ -624,7 +624,7 @@ class Ship extends Particle {
 }
 
 		function motion(event){
-			txtMot = `Motion x:${event.accelerationIncludingGravity.x} y:${event.accelerationIncludingGravity.y} z:${event.accelerationIncludingGravity.z}`;
+			txtMot = `Motion x:${floor(event.accelerationIncludingGravity.x)} y:${floor(event.accelerationIncludingGravity.y)} z:${floor(event.accelerationIncludingGravity.z)}`;
 	  	}
 			
 
