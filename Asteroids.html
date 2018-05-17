@@ -85,6 +85,7 @@
 	class Hud {
 		
 		constructor ( _w, _h ) {
+			this.freeTxt		= "";
 			this.w 				= _w;
 			this.h 				= _h;
 			this.b 				= 20;
@@ -97,6 +98,9 @@
 			this.txtOffY 		= this.b+this.txtSize;
 		}
 
+		setFreeTxt( _txt ){
+			this.freeTxt = _txt ;
+		}
 		update (_shots, _asteroidCount, _wave, _shipAge ) {
 			this.shots 			= _shots;
 			this.asteroidCount 	= _asteroidCount;
@@ -115,6 +119,7 @@
 			fill(this.colorArray[3]);
 			textSize(this.txtSize);
 			text(`Wave:${this.wave}.   Asteroids Remaining:${this.asteroidCount}.    Fire:${this.shots}   Score: ${this.shipAge}`, this.txtOffX, this.txtOffY);
+			text(this.freeTxt,this.txtOffX, this.txtOffY+30);
 			pop();
 		}
 	}
@@ -489,6 +494,8 @@ class Ship extends Particle {
 		var img ;
 		var maxAsteroids = 0;
 		var bFire = false;
+		var txtMag = "";
+		var txtMot = "";
 
 		function setup() {
 			maxAsteroids = MIN_ASTEROID_SPAWN;
@@ -578,6 +585,7 @@ class Ship extends Particle {
 
  				}
  				hud.update( spaceShip.fireCount, asteroid.length, wave, spaceShip.shipStatus.getTime());
+ 				hud.setFreeTxt(`${txtMot} - ${txtMag}`);
 				hud.draw();
  			}
 			spaceShip.draw();
@@ -602,7 +610,27 @@ class Ship extends Particle {
 			}
 
 		}
+		console.log('testing');
+		if(window.DeviceMotionEvent){
+			console.log('motion');
+ 			window.addEventListener("devicemotion", motion, false);
+		}else{
+  			console.log("DeviceMotionEvent is not supported");
+		}
+		if(window.DeviceOrientationEvent){
+ 		 window.addEventListener("deviceorientation", orientation, false);
+}else{
+  console.log("DeviceOrientationEvent is not supported");
+}
 
+		function motion(event){
+			txtMot = `Motion x:${event.accelerationIncludingGravity.x} y:${event.accelerationIncludingGravity.y} z:${event.accelerationIncludingGravity.z}`;
+	  	}
+			
+
+  		function orientation(event){
+ 	 		txtMag=`Magnetometer:a:${event.alpha} b:${event.beta}. g:${event.gamma}`;
+		}
 
 
 
